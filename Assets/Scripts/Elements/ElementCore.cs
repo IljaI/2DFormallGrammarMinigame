@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class ElementCore : MonoBehaviour
 {
-    public MeshFilter mainMesh;
+    public Transform meshParent;
 
     // Start is called before the first frame update
     void Start()
@@ -20,7 +20,7 @@ public class ElementCore : MonoBehaviour
 
     public void Initialize(char symbol)
     {
-        mainMesh.sharedMesh = SymbolToMesh.instance.GetMeshFromSymbol(symbol);
+        Instantiate(SymbolToObject.instance.GetObjFromSymbol(symbol), meshParent);
     }
 
 }

@@ -48,7 +48,6 @@ public class FormalGrammar2D : MonoBehaviour
         // Increasing gridSize by 1 (making it even) in case if its cleanly divisible by 2 (so that there would be place for center element)
         if (gridSize % 2 == 0) {gridSize++;}
         grid = new Element[gridSize,gridSize];
-
     }
 
     // Creates a word, with this class's startingElement as word's start point
@@ -104,7 +103,7 @@ public class FormalGrammar2D : MonoBehaviour
 
 
     
-    // Recursively prints word as sequence of realtions between elements.
+    // Recursively prints word as sequence of relations between elements.
     public string PrintWord(Element currentElement, Element prevElement, string directionFromPrev = "center")
     {
         if(currentElement != null)
@@ -238,7 +237,7 @@ public class FormalGrammar2D : MonoBehaviour
         DrawWordWithObject(startingElement, null, elementPrefab, Vector3.zero);
     }
 
-    // DEBUG ONLY Prints the word based on the helper grid
+    // DEBUG ONLY Prints the word based on the helper grid [DEPRECATED]
     public void DrawWordWithObject(GameObject wordObject)
     {
         for(int i = 0; i < gridSize; i++)
@@ -271,13 +270,12 @@ public class FormalGrammar2D : MonoBehaviour
                 case "up": direction.x = 0; direction.y = 1.05f; break;
                 case "down": direction.x = 0; direction.y = -1.05f; break;
             }
+
+            // Creating new 3D object to represent this wordpart
             Vector3 newPos = new Vector3(prevPos.x + direction.x, prevPos.y + direction.y, 0);
-            GameObject newWordPart = Instantiate(wordObject, newPos, Quaternion.identity);
-            newWordPart.transform.name = $"{currentElement.letter}";
-            newWordPart.transform.GetComponent<ElementCore>();
-            //result += directionFromPrev + " from " + ((prevElement == null)? '*' : prevElement.letter) + " is ";
-            //result += currentElement.letter.ToString() + " \n";
-            //Debug.Log("Amount of neighbors for " + currentElement.letter + " is " + currentElement.amountOfNeighbors());
+            Create3DWordPart(newPos, wordObject, currentElement.letter);
+
+            // Continuing recursion
             if(currentElement.left != null && directionFromPrev != "right") { result += DrawWordWithObject(currentElement.left, currentElement, wordObject, newPos, "left"); }
             if(currentElement.right != null && directionFromPrev != "left") { result += DrawWordWithObject(currentElement.right, currentElement, wordObject,  newPos, "right"); }
             if(currentElement.up != null && directionFromPrev != "down") { result += DrawWordWithObject(currentElement.up, currentElement, wordObject, newPos,"up" ); }
@@ -286,5 +284,12 @@ public class FormalGrammar2D : MonoBehaviour
         }
         Debug.Log("Can't print the word: Current element is null");
         return "Can't print the word: Current element is null";
+    }
+
+    public void Create3DWordPart(Vector3 pos, GameObject wordObject, char letter)
+    {
+        ElementCore newWordPart = Instantiate(wordObject, pos, Quaternion.identity).GetComponent<ElementCore>();
+        newWordPart.transform.name = letter.ToString();
+        newWordPart.Initialize(letter);
     }
 }

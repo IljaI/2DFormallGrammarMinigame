@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SymbolToMesh : MonoBehaviour
+public class SymbolToObject : MonoBehaviour
 {
-    public static SymbolToMesh instance;
-    public List<string> meshList;
+    public static SymbolToObject instance;
     public List<string> packList;
     public string selectedPack = "SimpleGeometryPack";
     
-    public Dictionary<char, Mesh> vocabulary;
+    public Dictionary<char, GameObject> vocabulary = new Dictionary<char, GameObject>();
 
     void Start()
     {
@@ -30,26 +29,26 @@ public class SymbolToMesh : MonoBehaviour
 
     public void AssociateLanguageWithMeshes(List<char> language)
     {
-        int i = 0;
         foreach (char symbol in language)
         {
-            if (i < meshList.Count)
-            {
-                AddSymbol(symbol, meshList[i++]);
-            }
-            else
-            {
-                Debug.LogError("Code tried to go out of scope of the meshList!. i = " + i + " , meshList count is " + meshList.Count);
-            }
+            AddSymbol(symbol);
         }
     }
 
-    public void AddSymbol(char symbol, string meshName)
+    public void AddSymbol(char symbol)
     {
-        vocabulary.Add(symbol, Resources.Load<Mesh>("Graphics/3DModels/ElementModels/" + selectedPack + '/' + meshName));
+        GameObject targetMesh = Resources.Load<GameObject>("Graphics/3DModels/ElementModels/" + selectedPack + '/' + symbol);
+        if (targetMesh != null)
+        {
+            vocabulary.Add(symbol, targetMesh);
+        }
+        else
+        {
+            Debug.LogError($"SymbolToMesh wasn't been able to find a mesh named {symbol} in a {selectedPack} pack!");
+        }
     }
 
-    public Mesh GetMeshFromSymbol(char symbol)
+    public GameObject GetObjFromSymbol(char symbol)
     {
         if(vocabulary.ContainsKey(symbol))
         {
