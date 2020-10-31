@@ -265,10 +265,10 @@ public class FormalGrammar2D : MonoBehaviour
             switch (directionFromPrev)
             {
                 case "center": direction.x = 0; direction.y = 0; break;
-                case "left": direction.x = 1.05f; direction.y = 0; break;
-                case "right": direction.x = -1.05f; direction.y = 0; break;
-                case "up": direction.x = 0; direction.y = 1.05f; break;
-                case "down": direction.x = 0; direction.y = -1.05f; break;
+                case "left": direction.x = 1f; direction.y = 0; break;
+                case "right": direction.x = -1f; direction.y = 0; break;
+                case "up": direction.x = 0; direction.y = 1f; break;
+                case "down": direction.x = 0; direction.y = -1f; break;
             }
 
             // Creating new 3D object to represent this wordpart
