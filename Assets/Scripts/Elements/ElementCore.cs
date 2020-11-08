@@ -8,11 +8,15 @@ public class ElementCore : MonoBehaviour
     public Transform meshParent;
     public Vector3 targetScale;
     public Vector3 startScale = Vector3.zero;
+    public Vector3 targetPos;
     public Element logicalElement;
+    public bool logicallyDisabled = false; 
     // Start is called before the first frame update
     void Start()
     {
         transform.localScale = startScale;
+        targetPos = transform.position;
+        //InvokeRepeating("dummyFunc", 1f, 1f);
     }
 
     // Update is called once per frame
@@ -21,6 +25,10 @@ public class ElementCore : MonoBehaviour
         if ( (targetScale.x - transform.localScale.x) > 0.0001f || (transform.localScale.x - targetScale.x) > 0.0001f )
         {
             UpdateScaling();
+        }
+        if ( Vector3.Distance(transform.position, targetPos) > 0.0001f )
+        {
+            UpdatePosition();
         }
     }
 
@@ -37,15 +45,30 @@ public class ElementCore : MonoBehaviour
         //Debug.Log($"Updating Scaling [{System.DateTime.Now}]");
     }
 
+    public void UpdatePosition()
+    {
+        transform.position = Vector3.Slerp(transform.position, targetPos, 3f * Time.deltaTime);
+    }
+
     public void ApplyRuleOnThis(string rule)
     {
-        logicalElement.grammar.ApplyRule(rule, logicalElement);
-        Debug.Log($"Applied rule {rule} on {transform.name} [{System.DateTime.Now}]");
+        if (!logicallyDisabled)
+        {
+            Debug.Log($"Apply rule {rule} on {transform.name}");
+            logicalElement.grammar.ApplyRule(rule, logicalElement);
+            logicallyDisabled = true;
+            GetComponent<Collider>().enabled = false;
+        }
     }
 
     private void OnMouseDown()
     {
-        ApplyRuleOnThis("S^S");
+        ApplyRuleOnThis("S>b^a");
+    }
+
+    void dummyFunc()
+    {
+        ApplyRuleOnThis("S^b<a|a*<a*>b^c*|c");
     }
 
 }

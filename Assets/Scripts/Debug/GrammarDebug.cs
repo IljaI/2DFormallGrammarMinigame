@@ -10,8 +10,8 @@ public class GrammarDebug : MonoBehaviour
     {
         SymbolToObject.instance.SetSelectedPack("SimpleGeometryPack");
         SymbolToObject.instance.AssociateLanguageWithMeshes(new List<char>{ 'a', 'b', 'c', 'd', 'S'});
-        FormalGrammar2D grammar = new FormalGrammar2D(25, wordPart);
-        grammar.GenerateWord("<c<a|b*>b>a^d^a|>b", 'S');
+        FormalGrammar2D grammar = new FormalGrammar2D(100, wordPart);
+        grammar.GenerateWord("", 'S');
         //Debug.Log(grammar.PrintWord(grammar.startingElement, null));
         //grammar.ApplyRule("<a<a|b*>b>a^a|>b", (grammar.gridSize / 2) + 1, (grammar.gridSize / 2) + 1);
         //grammar.DrawWordWithObject(wordPart);

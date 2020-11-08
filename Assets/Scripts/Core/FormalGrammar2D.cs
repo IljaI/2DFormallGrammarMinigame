@@ -7,11 +7,12 @@ using UnityEngine;
 public class Element 
 {
     public Element right, left, up, down;
+    public int x, y;
     public ElementCore realObject = null;
     public FormalGrammar2D grammar;
     public char letter;
 
-    public Element(FormalGrammar2D _grammar, char _letter = '?', Element _right = null, Element _left = null, Element _up = null, Element _down = null)
+    public Element(FormalGrammar2D _grammar, int _x, int _y, char _letter = '?', Element _right = null, Element _left = null, Element _up = null, Element _down = null)
     {
         letter = _letter;
         right = _right;
@@ -19,6 +20,8 @@ public class Element
         up = _up;
         down = _down;
         grammar = _grammar;
+        x = _x;
+        y = _y;
     }
 
     // Returns true if this Element is connected to only one other Elemnt, thus being sort of a words/branch end.
@@ -30,11 +33,6 @@ public class Element
         amount += (up != null)? 1 : 0;
         amount += (down)!= null? 1 : 0;
         return amount;
-    }
-
-    ~Element()
-    {
-        
     }
 }
 
@@ -55,41 +53,56 @@ public class FormalGrammar2D : MonoBehaviour
         elementPrefab = _elementPrefab;
     }
 
+    public Element AddLogicalElement(int x, int y, char _letter = '?',  Element _right = null, Element _left = null, Element _up = null, Element _down = null)
+    {
+        Element newElement = new Element(this, x, y, _letter, _right, _left, _up, _down);
+        if(x == gridSize || x < 0 || y == gridSize || y < 0)
+        {
+            Debug.LogError($"Out of grid bonds: trying to add {_letter} at x:{x} y:{y}");
+        }
+        grid[x, y] = newElement;
+        return newElement;
+    }
+
     // Creates a word, with this class's startingElement as word's start point
     public void GenerateWord(string instructions, char startingLetter)    
     {
-        startingElement = new Element(this, startingLetter);
+        // Initializing cooridnates which will be used to place elements into the correct grid slots
+        int x = gridSize / 2;
+        int y = gridSize / 2;
+        startingElement = AddLogicalElement( x, y, startingLetter);
         // Iterator for the loop below
         Element currentElement = startingElement;
-        Update3DWordPart(Vector3.zero, currentElement);
-        // Filling in first grid cell     
+        Update3DWordPart(Vector3.zero, currentElement); 
         foreach (var letter in instructions)
         {
             switch (letter) 
             {
                 case '<':
                     if(currentElement.left == null) 
-                        { currentElement.left = new Element(this, _right: currentElement); }
+                        { currentElement.left = AddLogicalElement(--x, y, _right: currentElement); }
                     currentElement = currentElement.left;
                 break;
                 case '>':
                     if(currentElement.right == null) 
-                        { currentElement.right = new Element(this, _left: currentElement); }
+                        { currentElement.right = AddLogicalElement(++x, y, _left: currentElement); }
                     currentElement = currentElement.right;
                 break;
                 case '^':
                     if(currentElement.up == null) 
-                        { currentElement.up = new Element(this, _down: currentElement); }
+                        { currentElement.up = AddLogicalElement(x, ++y, _down: currentElement); }
                     currentElement = currentElement.up;
                 break;
                 case '|':
                     if(currentElement.down == null) 
-                        { currentElement.down = new Element(this, _up: currentElement); }
+                        { currentElement.down = AddLogicalElement(x,--y, _up: currentElement); }
                     currentElement = currentElement.down;
                 break;
                 case '*':
                     currentElement = startingElement;
-                break;
+                    x = gridSize / 2;
+                    y = gridSize / 2;
+                    break;
                 default:
                     // In case it's neither of the directions symbols, it's a command to set word to current element.
                     currentElement.letter = letter;
@@ -121,15 +134,17 @@ public class FormalGrammar2D : MonoBehaviour
 
     public void ApplyRule(string instructions, Element targetElement)
     {
+        int x = targetElement.x;
+        int y = targetElement.y;
         // Some exception check
         if(instructions[0] == '<' || instructions[0] == '>' || instructions[0] == '^' || instructions[0] == '|' || instructions[0] == '*')
-        { Debug.LogError($"Error! Instruction should be starting with a letter! The passed instruction was {instructions} , for element {targetElement.letter}"); return; }
+        { Debug.LogError($"Error! Instruction should be starting with a letter! The passed instruction was '{instructions}' , for element {targetElement.letter}"); return; }
 
         // First character of the string must be a symbol instruction. Take over all of the relationships of the target element
-        Element currentElement = new Element(this, instructions[0]);
+        Element currentElement = AddLogicalElement(x, y, instructions[0]);
         Update3DWordPart(targetElement.realObject.transform.position, currentElement);
         // Destroy (untangle/disconnect) target non-terminal from which the transformation will happen
-        ReplaceElement(targetElement, currentElement);
+        ReplaceElement(ref targetElement, currentElement);
 
         char prevDirection = '*';
         foreach (var letter in instructions)
@@ -137,7 +152,7 @@ public class FormalGrammar2D : MonoBehaviour
             switch (letter)
             {
                 case '<':
-                    if (currentElement.left == null)
+                    if (grid[--x, y] == null)
                     // [new] <- (old)
                     { currentElement.left = new Element(this, _right: currentElement); prevDirection = '*'; }
                     else
@@ -145,7 +160,7 @@ public class FormalGrammar2D : MonoBehaviour
                     currentElement = currentElement.left;
                     break;
                 case '>':
-                    if (currentElement.right == null)
+                    if (grid[++x, y] == null)
                     // (old) -> [new]
                     { currentElement.right = new Element(this, _left: currentElement); prevDirection = '*'; }
                     else
@@ -153,14 +168,14 @@ public class FormalGrammar2D : MonoBehaviour
                     currentElement = currentElement.right;
                     break;
                 case '^':
-                    if (currentElement.up == null)
+                    if (grid[x, ++y] == null)
                         { currentElement.up = new Element(this, _down: currentElement); prevDirection = '*'; }
                     else
                     { prevDirection = '^'; }
                     currentElement = currentElement.up;
                     break;
                 case '|':
-                    if (currentElement.down == null)
+                    if (grid[x, --y] == null)
                         { currentElement.down = new Element(this, _up: currentElement); prevDirection = '*'; }
                     else
                     { prevDirection = '|'; }
@@ -201,7 +216,7 @@ public class FormalGrammar2D : MonoBehaviour
         UpdateVisualization();
     }
 
-    public void ReplaceElement(Element targetElement, Element newStartingElement)
+    public void ReplaceElement(ref Element targetElement, Element newStartingElement)
     {
         // Rewiring Relationships TO
         Debug.Log("The Disconnected element is " + targetElement.letter);
@@ -220,7 +235,9 @@ public class FormalGrammar2D : MonoBehaviour
         newStartingElement.down = targetElement.down;
         // Destroing 3d representation of the old one
         targetElement.realObject.targetScale = Vector3.zero;
-        Destroy(targetElement.realObject.gameObject, 3);  
+        Destroy(targetElement.realObject.gameObject, 3);
+        targetElement.realObject = null;
+        targetElement = newStartingElement;
     }
 
     public void InsertToGrid(int x, int y, Element element, char direction = '*')
@@ -243,7 +260,6 @@ public class FormalGrammar2D : MonoBehaviour
 
     public void UpdateVisualization()
     {
-        // EITHER MAKE 3D OBJ CREATE INLINE IN APPLY AND CREATE, OR MAKE A LIST OF EXISTING 3D OBJECTS, FROM WHICH YOU WOULD TAKE 1 AND BASE VISUALIZATION ORIGIN POINT ON HIM
         DrawWordWithObject(latestCreatedElement, null, latestCreatedElement.realObject.transform.position);
     }
 
@@ -283,7 +299,6 @@ public class FormalGrammar2D : MonoBehaviour
 
             // Creating new 3D object to represent this wordpart
             Vector3 newPos = new Vector3(prevPos.x + direction.x, prevPos.y + direction.y, 0);
-            Debug.Log($"Creating {currentElement.letter} on pos ${newPos}");
             Update3DWordPart(newPos, currentElement);
 
             // Continuing recursion
@@ -293,20 +308,29 @@ public class FormalGrammar2D : MonoBehaviour
             if(currentElement.down != null && directionFromPrev != "up") { DrawWordWithObject(currentElement.down, currentElement, newPos,  "down"); }
             return result;
         }
-        Debug.Log("Can't print the word: Current element is null");
+        Debug.LogError("Can't print the word: Current element is null");
         return "Can't print the word: Current element is null";
     }
 
     public void Update3DWordPart(Vector3 pos, Element element)
     {
+        // Create the object if it doesn't exist yet
         if (element.realObject == null)
         {
             ElementCore newWordPart = Instantiate(elementPrefab, pos, Quaternion.identity).GetComponent<ElementCore>();
+            Debug.Log($"Created {element.letter} on pos ${pos}");
+            newWordPart.targetPos = pos;
             newWordPart.gameObject.AddComponent<BoxCollider>();
             newWordPart.transform.name = element.letter.ToString();
             newWordPart.Initialize(element);
             element.realObject = newWordPart;
             latestCreatedElement = element;
+        }
+        if (element.realObject.targetPos != pos)
+        {
+            Debug.Log($"Move object {element.letter} to the position {pos}");
+            // Command object to move to the new position
+            element.realObject.targetPos = pos;
         }
     }
 }
