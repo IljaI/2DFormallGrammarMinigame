@@ -9,7 +9,7 @@ public class GrammarDebug : MonoBehaviour
     void Start()
     {
         SymbolToObject.instance.SetSelectedPack("SimpleGeometryPack");
-        SymbolToObject.instance.AssociateLanguageWithMeshes(new List<char>{ 'a', 'b', 'c', 'd', 'S'});
+        SymbolToObject.instance.AssociateLanguageWithMeshes(new List<char>{ 'a', 'b', 'c', 'd', 'S', '_'});
         FormalGrammar2D grammar = new FormalGrammar2D(100, wordPart);
         grammar.GenerateWord("", 'S');
         //Debug.Log(grammar.PrintWord(grammar.startingElement, null));

@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Xml.Schema;
 using UnityEngine;
 
 // Element is a single letter of the word. It has 4 'neighboors', references to the other Elemnts in the framnets.
@@ -12,7 +13,7 @@ public class Element
     public FormalGrammar2D grammar;
     public char letter;
 
-    public Element(FormalGrammar2D _grammar, int _x, int _y, char _letter = '?', Element _right = null, Element _left = null, Element _up = null, Element _down = null)
+    public Element(FormalGrammar2D _grammar, int _x, int _y, char _letter = '_', Element _right = null, Element _left = null, Element _up = null, Element _down = null)
     {
         letter = _letter;
         right = _right;
@@ -43,6 +44,7 @@ public class FormalGrammar2D : MonoBehaviour
     public int gridSize;
     public GameObject elementPrefab;
     public Element latestCreatedElement;
+    private int idNumber;
 
     public FormalGrammar2D(int _gridSize, GameObject _elementPrefab)
     {
@@ -50,18 +52,69 @@ public class FormalGrammar2D : MonoBehaviour
         // Increasing gridSize by 1 (making it even) in case if its cleanly divisible by 2 (so that there would be place for center element)
         if (gridSize % 2 == 0) {gridSize++;}
         grid = new Element[gridSize,gridSize];
+        for (int i = 0; i < gridSize; i++)
+        {
+            for (int k = 0; k < gridSize; k++)
+            {
+                grid[i, k] = null;
+            }
+        }
         elementPrefab = _elementPrefab;
     }
 
-    public Element AddLogicalElement(int x, int y, char _letter = '?',  Element _right = null, Element _left = null, Element _up = null, Element _down = null)
+    public Element AddLogicalElement(int x, int y, char direction, char _letter = '_',  Element _right = null, Element _left = null, Element _up = null, Element _down = null)
     {
+        Debug.Log($"Got command to create element with letter {_letter} on pos [{x},{y}]");
         Element newElement = new Element(this, x, y, _letter, _right, _left, _up, _down);
-        if(x == gridSize || x < 0 || y == gridSize || y < 0)
+        Debug.Log($"Letter of the freshly created element is {newElement.letter}");
+        if (x == gridSize || x < 0 || y == gridSize || y < 0)
         {
-            Debug.LogError($"Out of grid bonds: trying to add {_letter} at x:{x} y:{y}");
+            Debug.LogError($"Out of grid bounds: trying to add {_letter} at x:{x} y:{y}");
         }
-        grid[x, y] = newElement;
+        InsertIntoGrid(x, y, newElement, direction, direction);
         return newElement;
+    }
+
+    public void InsertIntoGrid(int x, int y, Element element, char directionFromPrev, char globalDirection)
+    {
+        if (grid[x, y] == null)
+        {
+            Debug.Log($"There was nothing in the grid[{x},{y}], so new element {idNumber+1}_{element.letter} was placed there.");
+            grid[x, y] = element;
+        }
+        else
+        {
+            Debug.Log($"Going into the recursive iterations on element {idNumber}_{element.letter} [{x},{y}], global direction: {globalDirection}, direction from prev: {directionFromPrev}");
+            // Rabbit hole of recursive moving of the whole grid
+            int dir_x = 0;
+            int dir_y = 0;
+            switch (globalDirection)
+            {
+                case '<': dir_x = 1; dir_y = 0; break;
+                case '>': dir_x = -1; dir_y = 0; break;
+                case '^': dir_x = 0; dir_y = 1; break;
+                case '|': dir_x = 0; dir_y = -1; break;
+                default: 
+                    Debug.LogError("'*' direction was passed into the insert to grid function's recursion scope! Idk if that is wrong or not, but it might cause infinite recursion, so aborting..."); 
+                    return;
+            }
+
+            // Assuring that all elements placed in the target direction are moved
+            Vector3 newPos = new Vector3(x + dir_x, y + dir_y, 0);
+            InsertIntoGrid(x + dir_x, y + dir_y, grid[x, y], directionFromPrev, globalDirection);
+
+            // Assuring that all connected elements of each moved element are moved (as on first iteration directionFromPrev and globalDirection will be the same, update won't go into the wrong (opposite from the target direction) direction.
+            if (element.left != null && directionFromPrev != '>')  { InsertIntoGrid((x - 1) + dir_x, y + dir_y, element.left,  '<', globalDirection); }
+            if (element.right != null && directionFromPrev != '<') { InsertIntoGrid((x + 1) + dir_x, y + dir_y, element.right, '>', globalDirection); }
+            if (element.up != null && directionFromPrev != '|')    { InsertIntoGrid(x + dir_x, (y + 1) + dir_y, element.up,    '^', globalDirection); }
+            if (element.down != null && directionFromPrev != '^')  { InsertIntoGrid(x + dir_x, (y - 1) + dir_y, element.down,  '|', globalDirection); }          
+        }
+        Update3DWordPart(new Vector3(x, y, 0), element);
+    }
+
+    public void RemoveFromGrid(int x, int y)
+    {
+        grid[x, y] = null;
     }
 
     // Creates a word, with this class's startingElement as word's start point
@@ -70,33 +123,36 @@ public class FormalGrammar2D : MonoBehaviour
         // Initializing cooridnates which will be used to place elements into the correct grid slots
         int x = gridSize / 2;
         int y = gridSize / 2;
-        startingElement = AddLogicalElement( x, y, startingLetter);
+        startingElement = AddLogicalElement( x, y, '*', _letter: startingLetter);
         // Iterator for the loop below
         Element currentElement = startingElement;
-        Update3DWordPart(Vector3.zero, currentElement); 
         foreach (var letter in instructions)
         {
             switch (letter) 
             {
                 case '<':
                     if(currentElement.left == null) 
-                        { currentElement.left = AddLogicalElement(--x, y, _right: currentElement); }
+                        { currentElement.left = AddLogicalElement(x-1, y, letter, _right: currentElement); }
                     currentElement = currentElement.left;
+                    --x;
                 break;
                 case '>':
                     if(currentElement.right == null) 
-                        { currentElement.right = AddLogicalElement(++x, y, _left: currentElement); }
+                        { currentElement.right = AddLogicalElement(x+1, y, letter, _left: currentElement); }
                     currentElement = currentElement.right;
+                    ++x;
                 break;
                 case '^':
                     if(currentElement.up == null) 
-                        { currentElement.up = AddLogicalElement(x, ++y, _down: currentElement); }
+                        { currentElement.up = AddLogicalElement(x, y+1, letter, _down: currentElement); }
                     currentElement = currentElement.up;
+                    ++y;
                 break;
                 case '|':
                     if(currentElement.down == null) 
-                        { currentElement.down = AddLogicalElement(x,--y, _up: currentElement); }
+                        { currentElement.down = AddLogicalElement(x,y-1, letter, _up: currentElement); }
                     currentElement = currentElement.down;
+                    --y;
                 break;
                 case '*':
                     currentElement = startingElement;
@@ -109,7 +165,6 @@ public class FormalGrammar2D : MonoBehaviour
                 break;
             }
         }
-        UpdateVisualization();
     }
 
 
@@ -134,137 +189,175 @@ public class FormalGrammar2D : MonoBehaviour
 
     public void ApplyRule(string instructions, Element targetElement)
     {
+        Debug.Log($"Apply rule {instructions} on {targetElement.realObject}");
         int x = targetElement.x;
         int y = targetElement.y;
         // Some exception check
-        if(instructions[0] == '<' || instructions[0] == '>' || instructions[0] == '^' || instructions[0] == '|' || instructions[0] == '*')
+        if (instructions[0] == '<' || instructions[0] == '>' || instructions[0] == '^' || instructions[0] == '|' || instructions[0] == '*')
         { Debug.LogError($"Error! Instruction should be starting with a letter! The passed instruction was '{instructions}' , for element {targetElement.letter}"); return; }
+        if (instructions.Length < 2)
+        { Debug.LogError($"Error while parsing instruction {instructions}: instructions should be >= 2 in length."); }
 
-        // First character of the string must be a symbol instruction. Take over all of the relationships of the target element
-        Element currentElement = AddLogicalElement(x, y, instructions[0]);
-        Update3DWordPart(targetElement.realObject.transform.position, currentElement);
+        // First character of the string must be a symbol instruction. 
+        RemoveFromGrid(x, y);
+        Element currentElement = AddLogicalElement(x, y, '*', _letter: instructions[0]);
+        startingElement = currentElement;
         // Destroy (untangle/disconnect) target non-terminal from which the transformation will happen
-        ReplaceElement(ref targetElement, currentElement);
+        ReplaceElement( targetElement, currentElement);
 
         char prevDirection = '*';
-        foreach (var letter in instructions)
+        char prevCommand = instructions[0];
+        char command = instructions[1];
+        // Starting from the second command, as the first one was already processed
+        for (int i = 1; i < instructions.Length; i++)
         {
-            switch (letter)
+            command = instructions[i];
+            bool insertWordCommand = !(command == '<' || command == '>' || command == '|' || command == '*' || command == '^');
+            bool insertWordCommandPrev = !(prevCommand == '<' || prevCommand == '>' || prevCommand == '|' || prevCommand == '*' || prevCommand == '^');
+            if(insertWordCommand && insertWordCommandPrev) { Debug.LogError($"Instruction {instructions} are incorrect: you cant have two symbol declaration in a row. Two commands are {prevCommand} and {command}. Index is {i}."); return; }
+            switch (prevCommand)
             {
                 case '<':
-                    if (grid[--x, y] == null)
-                    // [new] <- (old)
-                    { currentElement.left = new Element(this, _right: currentElement); prevDirection = '*'; }
+                    if (currentElement.left == null)//(grid[x--, y] == null)
+                    {
+                        if (insertWordCommand)
+                        { currentElement.left = AddLogicalElement(x - 1, y, prevCommand, _letter: command, _right: currentElement); prevDirection = '*'; }
+                        else
+                        { Debug.LogError($"Error applying rule {instructions} on {currentElement.realObject} - You can't move on without specifying the element's letter."); }
+                    }
                     else
                     { prevDirection = '<'; }
                     currentElement = currentElement.left;
+                    --x;
                     break;
                 case '>':
-                    if (grid[++x, y] == null)
-                    // (old) -> [new]
-                    { currentElement.right = new Element(this, _left: currentElement); prevDirection = '*'; }
+                    if (currentElement.right == null)//(grid[x++, y] == null)
+                    {
+                        if (insertWordCommand)
+                        { currentElement.right = AddLogicalElement(x + 1, y, prevCommand, _letter: command, _left: currentElement); prevDirection = '*'; }
+                        else
+                        { Debug.LogError($"Error applying rule {instructions} on {currentElement.realObject} - You can't move on without specifying the element's letter."); }
+                    }
                     else
                     { prevDirection = '>'; }
                     currentElement = currentElement.right;
+                    ++x;
                     break;
                 case '^':
-                    if (grid[x, ++y] == null)
-                        { currentElement.up = new Element(this, _down: currentElement); prevDirection = '*'; }
+                    if (currentElement.up == null)//(grid[x, y++] == null)
+                    {
+                        if (insertWordCommand)
+                        { currentElement.up = AddLogicalElement(x, y + 1, prevCommand, _letter: command, _down: currentElement); prevDirection = '*'; }
+                        else
+                        { Debug.LogError($"Error applying rule {instructions} on {currentElement.realObject} - You can't move on without specifying the element's letter."); }
+                    }
                     else
                     { prevDirection = '^'; }
                     currentElement = currentElement.up;
+                    ++y;
                     break;
                 case '|':
-                    if (grid[x, --y] == null)
-                        { currentElement.down = new Element(this, _up: currentElement); prevDirection = '*'; }
+                    if (currentElement.down == null)//(grid[x, y--] == null)
+                    {
+                        if (insertWordCommand)
+                        { currentElement.down = AddLogicalElement(x, y - 1, prevCommand, _letter: command, _up: currentElement); prevDirection = '*'; }
+                        else
+                        { Debug.LogError($"Error applying rule {instructions} on {currentElement.realObject} - You can't move on without specifying the element's letter."); }
+                    }
                     else
                     { prevDirection = '|'; }
                     currentElement = currentElement.down;
+                    --y;
                     break;
                 case '*':
                     currentElement = targetElement;
                     break;
-                default:
-                    // In case it's neither of the directions symbols, it's a command to set word to current element.              
-                    switch (prevDirection)
-                    {
-                        case '<':
-                            // (a) [c] (b)
-                            currentElement.right.left = new Element(this, _right: currentElement.right); currentElement.right = currentElement.right.left; currentElement.right.left = currentElement;
-                            currentElement = currentElement.right;
-                            break;
-                        case '>':
-                            currentElement.left.right = new Element(this, _left: currentElement.left); currentElement.left = currentElement.left.right; currentElement.left.right = currentElement;
-                            currentElement = currentElement.left;
-                            break;
-                        case '^':
-                            currentElement.down.up = new Element(this, _down: currentElement.down); currentElement.down = currentElement.down.up; currentElement.down.up = currentElement;
-                            currentElement = currentElement.down;
-                            break;
-                        case '|':
-                            currentElement.up.down = new Element(this, _up: currentElement.up); currentElement.up = currentElement.up.down; currentElement.up.down = currentElement;
-                            currentElement = currentElement.up;
-                            break;
-                        default:
-                            break;
-                    }
-                    currentElement.letter = letter;
-                    break;
             }
+            // In case it's neither of the directions symbols, it's a command to set word to current element.              
+            switch (prevDirection)
+            {
+                // In case if element already had other element connected on that place, create new one and re-structure their relations.
+                case '<':
+                    currentElement.right.left = AddLogicalElement(x, y, prevDirection, _letter: command, _right: currentElement.right); currentElement.right = currentElement.right.left; currentElement.right.left = currentElement;
+                    currentElement = currentElement.right;
+                    break;
+                case '>':
+                    currentElement.left.right = AddLogicalElement(x, y, prevDirection, _letter: command, _left: currentElement.left); currentElement.left = currentElement.left.right; currentElement.left.right = currentElement;
+                    currentElement = currentElement.left;
+                    break;
+                case '^':
+                    currentElement.down.up = AddLogicalElement(x, y, prevDirection, _letter: command, _down: currentElement.down); currentElement.down = currentElement.down.up; currentElement.down.up = currentElement;
+                    currentElement = currentElement.down;
+                    break;
+                case '|':
+                    currentElement.up.down = AddLogicalElement(x, y, prevDirection, _letter: command, _up: currentElement.up); currentElement.up = currentElement.up.down; currentElement.up.down = currentElement;
+                    currentElement = currentElement.up;
+                    break;
+                // If element was null, the direction will be *, thus nothing will be done in this step.
+                default:
+                    break;
+            }                            
+            prevCommand = command;
         }
-        startingElement = targetElement;
-        UpdateVisualization();
+
     }
 
-    public void ReplaceElement(ref Element targetElement, Element newStartingElement)
+    public void ReplaceElement(Element targetElement, Element newElement)
     {
         // Rewiring Relationships TO
         Debug.Log("The Disconnected element is " + targetElement.letter);
         if (targetElement.down != null)
-        { targetElement.down.up = newStartingElement; }
+        { targetElement.down.up = newElement; }
         if (targetElement.up != null)
-        { targetElement.up.down = newStartingElement; }
+        { targetElement.up.down = newElement; }
         if (targetElement.left != null)
-        { targetElement.left.right = newStartingElement; }
+        { targetElement.left.right = newElement; }
         if (targetElement.right != null)
-        { targetElement.right.left = newStartingElement; }
+        { targetElement.right.left = newElement; }
         // Rewiring Relationships FROM
-        newStartingElement.left = targetElement.left;
-        newStartingElement.right = targetElement.right;
-        newStartingElement.up = targetElement.up;
-        newStartingElement.down = targetElement.down;
+        newElement.left = targetElement.left;
+        newElement.right = targetElement.right;
+        newElement.up = targetElement.up;
+        newElement.down = targetElement.down;
         // Destroing 3d representation of the old one
         targetElement.realObject.targetScale = Vector3.zero;
         Destroy(targetElement.realObject.gameObject, 3);
         targetElement.realObject = null;
-        targetElement = newStartingElement;
     }
 
-    public void InsertToGrid(int x, int y, Element element, char direction = '*')
+    public void Update3DWordPart(Vector3 pos, Element element)
     {
-        if(x > gridSize - 1 || x < 0 || y >gridSize-1 || y < 0) { Debug.Log("Grammar tried to go out of bonds while inserting the word [" + element.letter + "into the " + x + ", " + y + "] position"); }
-        else
+        Debug.Log($"The update3dpart command was called for {pos} , element {element.letter}");
+        pos -= new Vector3(gridSize/2, gridSize/2, 0);
+        // Create the object if it doesn't exist yet
+        if (element.realObject == null)
         {
-            Element currentElement = element;
-            switch (direction)
-            {
-                case '<':
-                    while (currentElement.amountOfNeighbors() > 1)
-                    {
-                        // I feel like I will need to use recursion again...
-                    }
-                    break;
-            }
+            ElementCore newWordPart = Instantiate(elementPrefab, pos, Quaternion.identity).GetComponent<ElementCore>();
+            newWordPart.targetPos = pos;
+            newWordPart.gameObject.AddComponent<BoxCollider>();
+            newWordPart.transform.name = $"{++idNumber}_{element.letter.ToString()}";
+            Debug.Log($"Created real object {newWordPart.transform.name} on pos {pos}");
+            newWordPart.Initialize(element);
+            element.realObject = newWordPart;
+            latestCreatedElement = element;
+        }
+        if (element.realObject != null && element.realObject.targetPos != pos)
+        {
+            Debug.Log($"Move object {element.realObject.transform.name} to the position {pos}");
+            // Command object to move to the new position
+            element.realObject.targetPos = pos;
         }
     }
+}
 
+/*
     public void UpdateVisualization()
     {
         DrawWordWithObject(latestCreatedElement, null, latestCreatedElement.realObject.transform.position);
     }
 
     // DEBUG ONLY Prints the word based on the helper grid [DEPRECATED]
-   /* public void DrawWordWithObject(GameObject wordObject)
+    public void DrawWordWithObject(GameObject wordObject)
     {
         for(int i = 0; i < gridSize; i++)
         {
@@ -279,7 +372,7 @@ public class FormalGrammar2D : MonoBehaviour
                 }
             }
         }
-    }*/
+    }
 
     // Recursively prints word as sequence of relations between elements.
     public string DrawWordWithObject(Element currentElement, Element prevElement, Vector3 prevPos, string directionFromPrev = "center")
@@ -310,27 +403,4 @@ public class FormalGrammar2D : MonoBehaviour
         }
         Debug.LogError("Can't print the word: Current element is null");
         return "Can't print the word: Current element is null";
-    }
-
-    public void Update3DWordPart(Vector3 pos, Element element)
-    {
-        // Create the object if it doesn't exist yet
-        if (element.realObject == null)
-        {
-            ElementCore newWordPart = Instantiate(elementPrefab, pos, Quaternion.identity).GetComponent<ElementCore>();
-            Debug.Log($"Created {element.letter} on pos ${pos}");
-            newWordPart.targetPos = pos;
-            newWordPart.gameObject.AddComponent<BoxCollider>();
-            newWordPart.transform.name = element.letter.ToString();
-            newWordPart.Initialize(element);
-            element.realObject = newWordPart;
-            latestCreatedElement = element;
-        }
-        if (element.realObject.targetPos != pos)
-        {
-            Debug.Log($"Move object {element.letter} to the position {pos}");
-            // Command object to move to the new position
-            element.realObject.targetPos = pos;
-        }
-    }
-}
+    }*/

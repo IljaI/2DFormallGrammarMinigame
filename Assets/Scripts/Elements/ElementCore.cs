@@ -54,7 +54,6 @@ public class ElementCore : MonoBehaviour
     {
         if (!logicallyDisabled)
         {
-            Debug.Log($"Apply rule {rule} on {transform.name}");
             logicalElement.grammar.ApplyRule(rule, logicalElement);
             logicallyDisabled = true;
             GetComponent<Collider>().enabled = false;
@@ -63,7 +62,7 @@ public class ElementCore : MonoBehaviour
 
     private void OnMouseDown()
     {
-        ApplyRuleOnThis("S>b^a");
+        ApplyRuleOnThis("S^a");
     }
 
     void dummyFunc()
