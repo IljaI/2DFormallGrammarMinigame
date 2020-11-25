@@ -66,49 +66,60 @@ public class FormalGrammar2D : MonoBehaviour
     {
         Debug.Log($"Got command to create element with letter {_letter} on pos [{x},{y}]");
         Element newElement = new Element(this, x, y, _letter, _right, _left, _up, _down);
-        Debug.Log($"Letter of the freshly created element is {newElement.letter}");
-        if (x == gridSize || x < 0 || y == gridSize || y < 0)
-        {
-            Debug.LogError($"Out of grid bounds: trying to add {_letter} at x:{x} y:{y}");
-        }
         InsertIntoGrid(x, y, newElement, direction, direction);
         return newElement;
     }
 
     public void InsertIntoGrid(int x, int y, Element element, char directionFromPrev, char globalDirection)
     {
+        if (x == gridSize || x < 0 || y == gridSize || y < 0)
+        {
+            Debug.LogError($"Out of grid bounds: trying to add {element.letter} at x:{x} y:{y}");
+            return;
+        }
         if (grid[x, y] == null)
         {
-            Debug.Log($"There was nothing in the grid[{x},{y}], so new element {idNumber+1}_{element.letter} was placed there.");
+            Debug.Log($"There was nothing in the grid[{x},{y}], so element {element.letter} was placed there.");
             grid[x, y] = element;
+            element.x = x;
+            element.y = y;
+            Update3DWordPart(new Vector3(x, y, 0), element);
         }
         else
         {
-            Debug.Log($"Going into the recursive iterations on element {idNumber}_{element.letter} [{x},{y}], global direction: {globalDirection}, direction from prev: {directionFromPrev}");
-            // Rabbit hole of recursive moving of the whole grid
-            int dir_x = 0;
-            int dir_y = 0;
-            switch (globalDirection)
-            {
-                case '<': dir_x = 1; dir_y = 0; break;
-                case '>': dir_x = -1; dir_y = 0; break;
-                case '^': dir_x = 0; dir_y = 1; break;
-                case '|': dir_x = 0; dir_y = -1; break;
-                default: 
-                    Debug.LogError("'*' direction was passed into the insert to grid function's recursion scope! Idk if that is wrong or not, but it might cause infinite recursion, so aborting..."); 
-                    return;
-            }
-
-            // Assuring that all elements placed in the target direction are moved
-            Vector3 newPos = new Vector3(x + dir_x, y + dir_y, 0);
-            InsertIntoGrid(x + dir_x, y + dir_y, grid[x, y], directionFromPrev, globalDirection);
-
-            // Assuring that all connected elements of each moved element are moved (as on first iteration directionFromPrev and globalDirection will be the same, update won't go into the wrong (opposite from the target direction) direction.
-            if (element.left != null && directionFromPrev != '>')  { InsertIntoGrid((x - 1) + dir_x, y + dir_y, element.left,  '<', globalDirection); }
-            if (element.right != null && directionFromPrev != '<') { InsertIntoGrid((x + 1) + dir_x, y + dir_y, element.right, '>', globalDirection); }
-            if (element.up != null && directionFromPrev != '|')    { InsertIntoGrid(x + dir_x, (y + 1) + dir_y, element.up,    '^', globalDirection); }
-            if (element.down != null && directionFromPrev != '^')  { InsertIntoGrid(x + dir_x, (y - 1) + dir_y, element.down,  '|', globalDirection); }          
+            MoveInTheGrid(x, y, element, directionFromPrev, globalDirection);
         }
+        GrammarDebug.instance.UpdateGridDebug(grid, gridSize);
+    }
+
+    public void MoveInTheGrid(int x, int y, Element element, char directionFromPrev, char globalDirection)
+    {
+        // Rabbit hole of recursive moving of the whole grid
+        int dir_x = 0;
+        int dir_y = 0;
+        switch (globalDirection)
+        {
+            case '<': dir_x = -1; dir_y = 0; break;
+            case '>': dir_x = 1; dir_y = 0; break;
+            case '^': dir_x = 0; dir_y = 1; break;
+            case '|': dir_x = 0; dir_y = -1; break;
+            default:
+                Debug.LogError("Global direction can't be something other that the default 4 directions.");
+                return;
+        }
+
+        // Assuring that all elements placed in the target direction are moved
+        //Debug.Log($"Recursion: {grid[x, y].realObject.transform.name} on pos [{element.x},{element.y}] was replaced by element {(idNumber + 1).ToString() + "_" +element.letter } on pos [{x},{y}]");
+        RemoveFromGrid(element.x, element.y);
+        grid[x, y] = element;
+        element.x = x;
+        element.y = y;
+        // Debug.Log($"Recursion placed {element.realObject.transform.name} at [{x},{y}]");
+        // Assuring that all connected elements of each moved element are moved (as on first iteration directionFromPrev and globalDirection will be the same, update won't go into the wrong (opposite from the target direction) direction.
+        if (element.left != null && directionFromPrev != '>')  { MoveInTheGrid(element.left.x + dir_x, element.left.y + dir_y, element.left,  '<', globalDirection); }
+        if (element.right != null && directionFromPrev != '<') { MoveInTheGrid(element.right.x + dir_x, element.right.y + dir_y, element.right, '>', globalDirection); }
+        if (element.up != null && directionFromPrev != '|')    { MoveInTheGrid(element.up.x + dir_x, element.up.y + dir_y, element.up,    '^', globalDirection); }
+        if (element.down != null && directionFromPrev != '^')  { MoveInTheGrid(element.down.x + dir_x, element.down.y + dir_y, element.down,  '|', globalDirection); }              
         Update3DWordPart(new Vector3(x, y, 0), element);
     }
 
@@ -273,30 +284,33 @@ public class FormalGrammar2D : MonoBehaviour
                     currentElement = targetElement;
                     break;
             }
-            // In case it's neither of the directions symbols, it's a command to set word to current element.              
-            switch (prevDirection)
+            // In case it's neither of the directions symbols, it's a command to set word to current element.
+            if (insertWordCommand)
             {
-                // In case if element already had other element connected on that place, create new one and re-structure their relations.
-                case '<':
-                    currentElement.right.left = AddLogicalElement(x, y, prevDirection, _letter: command, _right: currentElement.right); currentElement.right = currentElement.right.left; currentElement.right.left = currentElement;
-                    currentElement = currentElement.right;
-                    break;
-                case '>':
-                    currentElement.left.right = AddLogicalElement(x, y, prevDirection, _letter: command, _left: currentElement.left); currentElement.left = currentElement.left.right; currentElement.left.right = currentElement;
-                    currentElement = currentElement.left;
-                    break;
-                case '^':
-                    currentElement.down.up = AddLogicalElement(x, y, prevDirection, _letter: command, _down: currentElement.down); currentElement.down = currentElement.down.up; currentElement.down.up = currentElement;
-                    currentElement = currentElement.down;
-                    break;
-                case '|':
-                    currentElement.up.down = AddLogicalElement(x, y, prevDirection, _letter: command, _up: currentElement.up); currentElement.up = currentElement.up.down; currentElement.up.down = currentElement;
-                    currentElement = currentElement.up;
-                    break;
-                // If element was null, the direction will be *, thus nothing will be done in this step.
-                default:
-                    break;
-            }                            
+                switch (prevDirection)
+                {
+                    // In case if element already had other element connected on that place, create new one and re-structure their relations.
+                    case '<':
+                        currentElement.right.left = AddLogicalElement(x, y, prevDirection, _letter: command, _right: currentElement.right, _left: currentElement); currentElement.right = currentElement.right.left; ;
+                        currentElement = currentElement.right;
+                        break;
+                    case '>':
+                        currentElement.left.right = AddLogicalElement(x, y, prevDirection, _letter: command, _left: currentElement.left, _right: currentElement); currentElement.left = currentElement.left.right;
+                        currentElement = currentElement.left;
+                        break;
+                    case '^':
+                        currentElement.down.up = AddLogicalElement(x, y, prevDirection, _letter: command, _down: currentElement.down, _up: currentElement); currentElement.down = currentElement.down.up;
+                        currentElement = currentElement.down;
+                        break;
+                    case '|':
+                        currentElement.up.down = AddLogicalElement(x, y, prevDirection, _letter: command, _up: currentElement.up, _down: currentElement); currentElement.up = currentElement.up.down;
+                        currentElement = currentElement.up;
+                        break;
+                    // If element was null, the direction will be *, thus nothing will be done in this step.
+                    default:
+                        break;
+                }
+            }
             prevCommand = command;
         }
 

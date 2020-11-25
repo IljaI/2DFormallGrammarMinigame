@@ -14,9 +14,7 @@ public class ElementCore : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        transform.localScale = startScale;
-        targetPos = transform.position;
-        //InvokeRepeating("dummyFunc", 1f, 1f);
+
     }
 
     // Update is called once per frame
@@ -37,6 +35,8 @@ public class ElementCore : MonoBehaviour
         Instantiate(SymbolToObject.instance.GetObjFromSymbol(element.letter), meshParent);
         targetScale = Vector3.one;
         logicalElement = element;
+        transform.localScale = startScale;
+        targetPos = transform.position;
     }
 
     public void UpdateScaling()
@@ -62,7 +62,7 @@ public class ElementCore : MonoBehaviour
 
     private void OnMouseDown()
     {
-        ApplyRuleOnThis("S^a");
+        ApplyRuleOnThis("S^a>b");
     }
 
     void dummyFunc()
