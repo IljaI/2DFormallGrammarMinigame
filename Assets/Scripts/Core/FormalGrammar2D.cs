@@ -52,6 +52,7 @@ public class FormalGrammar2D : MonoBehaviour
         // Increasing gridSize by 1 (making it even) in case if its cleanly divisible by 2 (so that there would be place for center element)
         if (gridSize % 2 == 0) {gridSize++;}
         grid = new Element[gridSize,gridSize];
+        GrammarDebug.instance.gridDebugText.fontSize = 495 / gridSize;
         for (int i = 0; i < gridSize; i++)
         {
             for (int k = 0; k < gridSize; k++)
@@ -110,7 +111,7 @@ public class FormalGrammar2D : MonoBehaviour
 
         // Assuring that all elements placed in the target direction are moved
         //Debug.Log($"Recursion: {grid[x, y].realObject.transform.name} on pos [{element.x},{element.y}] was replaced by element {(idNumber + 1).ToString() + "_" +element.letter } on pos [{x},{y}]");
-        RemoveFromGrid(element.x, element.y);
+        //RemoveFromGrid(element.x, element.y);
         grid[x, y] = element;
         element.x = x;
         element.y = y;
@@ -281,7 +282,7 @@ public class FormalGrammar2D : MonoBehaviour
                     --y;
                     break;
                 case '*':
-                    currentElement = targetElement;
+                    currentElement = startingElement;
                     break;
             }
             // In case it's neither of the directions symbols, it's a command to set word to current element.
