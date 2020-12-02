@@ -62,7 +62,7 @@ public class ElementCore : MonoBehaviour
 
     private void OnMouseDown()
     {
-        ApplyRuleOnThis("S^a|c");
+        ApplyRuleOnThis("S^a");
     }
 
     void dummyFunc()

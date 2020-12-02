@@ -95,6 +95,13 @@ public class FormalGrammar2D : MonoBehaviour
 
     public void MoveInTheGrid(int x, int y, Element element, char directionFromPrev, char globalDirection)
     {
+        if(grid[x, y] == null)
+        {
+            if (grid[element.x, element.y] == element)
+            {
+                RemoveFromGrid(element.x, element.y);
+            }
+        }
         // Rabbit hole of recursive moving of the whole grid
         int dir_x = 0;
         int dir_y = 0;
@@ -110,8 +117,7 @@ public class FormalGrammar2D : MonoBehaviour
         }
 
         // Assuring that all elements placed in the target direction are moved
-        //Debug.Log($"Recursion: {grid[x, y].realObject.transform.name} on pos [{element.x},{element.y}] was replaced by element {(idNumber + 1).ToString() + "_" +element.letter } on pos [{x},{y}]");
-        //RemoveFromGrid(element.x, element.y);
+        //Debug.Log($"Recursion: {grid[x, y].realObject.transform.name} on pos [{element.x},{element.y}] was replaced by element {(idNumber + 1).ToString() + "_" +element.letter } on pos [{x},{y}]");     
         grid[x, y] = element;
         element.x = x;
         element.y = y;
@@ -137,6 +143,7 @@ public class FormalGrammar2D : MonoBehaviour
         int y = gridSize / 2;
         startingElement = AddLogicalElement( x, y, '*', _letter: startingLetter);
         // Iterator for the loop below
+        int i = 0;
         Element currentElement = startingElement;
         foreach (var letter in instructions)
         {
@@ -144,25 +151,25 @@ public class FormalGrammar2D : MonoBehaviour
             {
                 case '<':
                     if(currentElement.left == null) 
-                        { currentElement.left = AddLogicalElement(x-1, y, letter, _right: currentElement); }
+                        { currentElement.left = AddLogicalElement(x-1, y, letter, _letter: instructions[i+1], _right: currentElement); }
                     currentElement = currentElement.left;
                     --x;
                 break;
                 case '>':
                     if(currentElement.right == null) 
-                        { currentElement.right = AddLogicalElement(x+1, y, letter, _left: currentElement); }
+                        { currentElement.right = AddLogicalElement(x+1, y, letter, _letter: instructions[i + 1], _left: currentElement); }
                     currentElement = currentElement.right;
                     ++x;
                 break;
                 case '^':
                     if(currentElement.up == null) 
-                        { currentElement.up = AddLogicalElement(x, y+1, letter, _down: currentElement); }
+                        { currentElement.up = AddLogicalElement(x, y+1, letter, _letter: instructions[i + 1], _down: currentElement); }
                     currentElement = currentElement.up;
                     ++y;
                 break;
                 case '|':
                     if(currentElement.down == null) 
-                        { currentElement.down = AddLogicalElement(x,y-1, letter, _up: currentElement); }
+                        { currentElement.down = AddLogicalElement(x,y-1, letter, _letter: instructions[i + 1], _up: currentElement); }
                     currentElement = currentElement.down;
                     --y;
                 break;
@@ -176,6 +183,7 @@ public class FormalGrammar2D : MonoBehaviour
                     currentElement.letter = letter;
                 break;
             }
+            i++;
         }
     }
 
@@ -283,6 +291,8 @@ public class FormalGrammar2D : MonoBehaviour
                     break;
                 case '*':
                     currentElement = startingElement;
+                    x = currentElement.x;
+                    y = currentElement.y;
                     break;
             }
             // In case it's neither of the directions symbols, it's a command to set word to current element.
