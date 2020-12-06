@@ -35,6 +35,15 @@ public class Element
         amount += (down)!= null? 1 : 0;
         return amount;
     }
+
+    public bool isNeighboor(Element element)
+    {
+        if(right == element || left == element || up == element || down == element) 
+        { 
+            return true; 
+        }
+        return false;
+    }
 }
 
 public class FormalGrammar2D : MonoBehaviour 
@@ -61,6 +70,11 @@ public class FormalGrammar2D : MonoBehaviour
             }
         }
         elementPrefab = _elementPrefab;
+    }
+
+    public bool isDirection(char symbol)
+    {
+        return (symbol == '<' || symbol == '>' || symbol == '^' || symbol == '|' || symbol == '*');
     }
 
     public Element AddLogicalElement(int x, int y, char direction, char _letter = '_',  Element _right = null, Element _left = null, Element _up = null, Element _down = null)
@@ -138,6 +152,10 @@ public class FormalGrammar2D : MonoBehaviour
     // Creates a word, with this class's startingElement as word's start point
     public void GenerateWord(string instructions, char startingLetter)    
     {
+        if(isDirection(instructions[instructions.Length-1]))
+        {
+            Debug.LogError($"Error when generation word: Instructions should be ending with a letter! The passed instruction was '{instructions}'"); return;
+        }
         // Initializing cooridnates which will be used to place elements into the correct grid slots
         int x = gridSize / 2;
         int y = gridSize / 2;
@@ -150,26 +168,38 @@ public class FormalGrammar2D : MonoBehaviour
             switch (letter) 
             {
                 case '<':
-                    if(currentElement.left == null) 
-                        { currentElement.left = AddLogicalElement(x-1, y, letter, _letter: instructions[i+1], _right: currentElement); }
+                    if (currentElement.left == null)
+                    {
+                        if (grid[x - 1, y] != null) { Debug.LogError($"Error when generation word: Instructions shouldnt try to create a cycled connection (word connecting into each other)! The passed instruction was '{instructions}'"); return; } 
+                        { currentElement.left = AddLogicalElement(x - 1, y, letter, _letter: instructions[i + 1], _right: currentElement); currentElement.left.right = currentElement; }
+                    }
                     currentElement = currentElement.left;
                     --x;
                 break;
                 case '>':
-                    if(currentElement.right == null) 
-                        { currentElement.right = AddLogicalElement(x+1, y, letter, _letter: instructions[i + 1], _left: currentElement); }
-                    currentElement = currentElement.right;
+                    if (currentElement.right == null)
+                    {
+                        if (grid[x + 1, y] != null) { Debug.LogError($"Error when generation word: Instructions shouldnt try to create a cycled connection (word connecting into each other)! The passed instruction was '{instructions}'"); return; }
+                        { currentElement.right = AddLogicalElement(x + 1, y, letter, _letter: instructions[i + 1], _left: currentElement); currentElement.right.left = currentElement; }
+                    }
+                        currentElement = currentElement.right;
                     ++x;
                 break;
                 case '^':
-                    if(currentElement.up == null) 
-                        { currentElement.up = AddLogicalElement(x, y+1, letter, _letter: instructions[i + 1], _down: currentElement); }
+                    if (currentElement.up == null)
+                    {
+                        if (grid[x, y + 1] != null) { Debug.LogError($"Error when generation word: Instructions shouldnt try to create a cycled connection (word connecting into each other)! The passed instruction was '{instructions}'"); return; }
+                        { currentElement.up = AddLogicalElement(x, y + 1, letter, _letter: instructions[i + 1], _down: currentElement); currentElement.up.down = currentElement; }
+                    }
                     currentElement = currentElement.up;
                     ++y;
                 break;
                 case '|':
-                    if(currentElement.down == null) 
-                        { currentElement.down = AddLogicalElement(x,y-1, letter, _letter: instructions[i + 1], _up: currentElement); }
+                    if (currentElement.down == null)
+                    {
+                        if (grid[x, y - 1] != null) { Debug.LogError($"Error when generation word: Instructions shouldnt try to create a cycled connection (word connecting into each other)! The passed instruction was '{instructions}'"); return; }
+                        { currentElement.down = AddLogicalElement(x, y - 1, letter, _letter: instructions[i + 1], _up: currentElement); currentElement.down.up = currentElement; }
+                    }
                     currentElement = currentElement.down;
                     --y;
                 break;
@@ -213,7 +243,7 @@ public class FormalGrammar2D : MonoBehaviour
         int x = targetElement.x;
         int y = targetElement.y;
         // Some exception check
-        if (instructions[0] == '<' || instructions[0] == '>' || instructions[0] == '^' || instructions[0] == '|' || instructions[0] == '*')
+        if (isDirection(instructions[0]))
         { Debug.LogError($"Error! Instruction should be starting with a letter! The passed instruction was '{instructions}' , for element {targetElement.letter}"); return; }
         if (instructions.Length < 2)
         { Debug.LogError($"Error while parsing instruction {instructions}: instructions should be >= 2 in length."); }
