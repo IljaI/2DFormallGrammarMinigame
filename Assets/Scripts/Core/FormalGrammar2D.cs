@@ -109,7 +109,8 @@ public class FormalGrammar2D : MonoBehaviour
 
     public void MoveInTheGrid(int x, int y, Element element, char directionFromPrev, char globalDirection)
     {
-        if(grid[x, y] == null)
+        if (grid[x, y] != null && !element.isNeighboor(grid[x, y])) { Debug.LogError($"Error when applying rule: Instructions shouldnt try to create a cycled connection (word connecting into each other)! The passed letter was '{element.letter}'"); return; }
+        if (grid[x, y] == null)
         {
             if (grid[element.x, element.y] == element)
             {
@@ -271,7 +272,7 @@ public class FormalGrammar2D : MonoBehaviour
                 case '<':
                     if (currentElement.left == null)//(grid[x--, y] == null)
                     {
-                        if (grid[x - 1, y] != null) { Debug.LogError($"Error when generation word: Instructions shouldnt try to create a cycled connection (word connecting into each other)! The passed instruction was '{instructions}'"); return; }
+                        if (grid[x - 1, y] != null) { Debug.LogError($"Error when applying rule: Instructions shouldnt try to create a cycled connection (word connecting into each other)! The passed instruction was '{instructions}'"); return; }
                         if (insertWordCommand)
                         { currentElement.left = AddLogicalElement(x - 1, y, prevCommand, _letter: command, _right: currentElement); prevDirection = '*'; }
                         else
@@ -285,7 +286,7 @@ public class FormalGrammar2D : MonoBehaviour
                 case '>':
                     if (currentElement.right == null)//(grid[x++, y] == null)
                     {
-                        if (grid[x + 1, y] != null) { Debug.LogError($"Error when generation word: Instructions shouldnt try to create a cycled connection (word connecting into each other)! The passed instruction was '{instructions}'"); return; }
+                        if (grid[x + 1, y] != null) { Debug.LogError($"Error when applying rule: Instructions shouldnt try to create a cycled connection (word connecting into each other)! The passed instruction was '{instructions}'"); return; }
                         if (insertWordCommand)
                         { currentElement.right = AddLogicalElement(x + 1, y, prevCommand, _letter: command, _left: currentElement); prevDirection = '*'; }
                         else
@@ -299,7 +300,7 @@ public class FormalGrammar2D : MonoBehaviour
                 case '^':
                     if (currentElement.up == null)//(grid[x, y++] == null)
                     {
-                        if (grid[x, y + 1] != null) { Debug.LogError($"Error when generation word: Instructions shouldnt try to create a cycled connection (word connecting into each other)! The passed instruction was '{instructions}'"); return; }
+                        if (grid[x, y + 1] != null) { Debug.LogError($"Error when applying rule: Instructions shouldnt try to create a cycled connection (word connecting into each other)! The passed instruction was '{instructions}'"); return; }
                         if (insertWordCommand)
                         { currentElement.up = AddLogicalElement(x, y + 1, prevCommand, _letter: command, _down: currentElement); prevDirection = '*'; }
                         else
@@ -313,7 +314,7 @@ public class FormalGrammar2D : MonoBehaviour
                 case '|':
                     if (currentElement.down == null)//(grid[x, y--] == null)
                     {
-                        if (grid[x, y - 1] != null) { Debug.LogError($"Error when generation word: Instructions shouldnt try to create a cycled connection (word connecting into each other)! The passed instruction was '{instructions}'"); return; }
+                        if (grid[x, y - 1] != null) { Debug.LogError($"Error when applying rule: Instructions shouldnt try to create a cycled connection (word connecting into each other)! The passed instruction was '{instructions}'"); return; }
                         if (insertWordCommand)
                         { currentElement.down = AddLogicalElement(x, y - 1, prevCommand, _letter: command, _up: currentElement); prevDirection = '*'; }
                         else
