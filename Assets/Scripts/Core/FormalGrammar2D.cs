@@ -54,8 +54,9 @@ public class FormalGrammar2D : MonoBehaviour
     public GameObject elementPrefab;
     public Element latestCreatedElement;
     private int idNumber;
+    private Vector3 startingCoordinates;
 
-    public FormalGrammar2D(int _gridSize, GameObject _elementPrefab)
+    public FormalGrammar2D(int _gridSize, GameObject _elementPrefab, Vector3 _startingCoordinates)
     {
         gridSize = _gridSize;
         // Increasing gridSize by 1 (making it even) in case if its cleanly divisible by 2 (so that there would be place for center element)
@@ -70,6 +71,7 @@ public class FormalGrammar2D : MonoBehaviour
             }
         }
         elementPrefab = _elementPrefab;
+        startingCoordinates = _startingCoordinates;
     }
 
     public bool isDirection(char symbol)
@@ -389,7 +391,7 @@ public class FormalGrammar2D : MonoBehaviour
     public void Update3DWordPart(Vector3 pos, Element element)
     {
         Debug.Log($"The update3dpart command was called for {pos} , element {element.letter}");
-        pos -= new Vector3(gridSize/2, gridSize/2, 0);
+        pos = startingCoordinates + (pos - new Vector3(gridSize/2, gridSize/2, 0));
         // Create the object if it doesn't exist yet
         if (element.realObject == null)
         {

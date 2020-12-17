@@ -14,11 +14,16 @@ public class GrammarDebug : MonoBehaviour
         instance = this;
         SymbolToObject.instance.SetSelectedPack("SimpleGeometryPack");
         SymbolToObject.instance.AssociateLanguageWithMeshes(new List<char>{ 'a', 'b', 'c', 'd', 'S', '_'});
-        FormalGrammar2D grammar = new FormalGrammar2D(30, wordPart);
-        grammar.GenerateWord(">a>a^a^a<a<a|a", 'S');
+        FormalGrammar2D grammar = new FormalGrammar2D(30, wordPart, new Vector3(0, 0, 7.39f));
+        grammar.GenerateWord(">a>a", 'S');
         //Debug.Log(grammar.PrintWord(grammar.startingElement, null));
         //grammar.ApplyRule("<a<a|b*>b>a^a|>b", (grammar.gridSize / 2) + 1, (grammar.gridSize / 2) + 1);
         //grammar.DrawWordWithObject(wordPart);
+    }
+
+    private void Update()
+    {
+        Camera.main.transform.RotateAround(new Vector3(0,0, 7.39f), Vector3.up, 20 * Time.deltaTime);
     }
 
     public void UpdateGridDebug(Element[,] elementGrid, int size)
