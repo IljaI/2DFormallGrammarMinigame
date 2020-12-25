@@ -10,7 +10,8 @@ public class ElementCore : MonoBehaviour
     public Vector3 startScale = Vector3.zero;
     public Vector3 targetPos;
     public Element logicalElement;
-    public bool logicallyDisabled = false; 
+    public bool logicallyDisabled = false;
+    public bool newPosition = false;
     // Start is called before the first frame update
     void Start()
     {
@@ -20,13 +21,20 @@ public class ElementCore : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if ( (targetScale.x - transform.localScale.x) > 0.0001f || (transform.localScale.x - targetScale.x) > 0.0001f )
+        if ((targetScale.x - transform.localScale.x) > 0.0001f || (transform.localScale.x - targetScale.x) > 0.0001f)
         {
             UpdateScaling();
         }
-        if ( Vector3.Distance(transform.position, targetPos) > 0.0001f )
+        if (newPosition)
         {
-            UpdatePosition();
+            if (Vector3.Distance(transform.position, targetPos) > 0.0001f)
+            {
+                UpdatePosition();
+            }
+            else
+            {
+                newPosition = false;
+            }
         }
     }
 
@@ -63,11 +71,6 @@ public class ElementCore : MonoBehaviour
     private void OnMouseDown()
     {
         ApplyRuleOnThis("S|b");
-    }
-
-    void dummyFunc()
-    {
-        ApplyRuleOnThis("S^b<a|a*<a*>b^c*|c");
     }
 
 }

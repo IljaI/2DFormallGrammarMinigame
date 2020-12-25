@@ -10,7 +10,7 @@ public class SymbolToObject : MonoBehaviour
     
     public Dictionary<char, GameObject> vocabulary = new Dictionary<char, GameObject>();
 
-    void Start()
+    void Awake()
     {
         instance = this;
     }

@@ -55,8 +55,9 @@ public class FormalGrammar2D : MonoBehaviour
     public Element latestCreatedElement;
     private int idNumber;
     private Vector3 startingCoordinates;
+    private Transform elementsParent;
 
-    public FormalGrammar2D(int _gridSize, GameObject _elementPrefab, Vector3 _startingCoordinates)
+    public FormalGrammar2D(int _gridSize, GameObject _elementPrefab, Vector3 _startingCoordinates, Transform _elementsParent)
     {
         gridSize = _gridSize;
         // Increasing gridSize by 1 (making it even) in case if its cleanly divisible by 2 (so that there would be place for center element)
@@ -72,6 +73,7 @@ public class FormalGrammar2D : MonoBehaviour
         }
         elementPrefab = _elementPrefab;
         startingCoordinates = _startingCoordinates;
+        elementsParent = _elementsParent;
     }
 
     public bool isDirection(char symbol)
@@ -395,7 +397,7 @@ public class FormalGrammar2D : MonoBehaviour
         // Create the object if it doesn't exist yet
         if (element.realObject == null)
         {
-            ElementCore newWordPart = Instantiate(elementPrefab, pos, Quaternion.identity).GetComponent<ElementCore>();
+            ElementCore newWordPart = Instantiate(elementPrefab, pos, Quaternion.identity, elementsParent).GetComponent<ElementCore>();
             newWordPart.targetPos = pos;
             newWordPart.gameObject.AddComponent<BoxCollider>();
             newWordPart.transform.name = $"{++idNumber}_{element.letter.ToString()}";
